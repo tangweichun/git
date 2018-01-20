@@ -1,0 +1,5 @@
+1.install dependencies
+yum install -y git scons gcc gcc-c++ openssl check cmake bison \
+boost-devel asio-devel libaio-devel ncurses-devel readline-devel pam-devel \
+socat
+
