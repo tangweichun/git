@@ -3,3 +3,60 @@ yum install -y git scons gcc gcc-c++ openssl check cmake bison \
 boost-devel asio-devel libaio-devel ncurses-devel readline-devel pam-devel \
 socat
 
+Node	  Host	IP
+Node 1	pxc1	192.168.56.101
+Node 2	pxc2	192.168.56.102
+Node 3	pxc3	192.168.56.103
+
+If you are running Red Hat or CentOS, add the following configuration variables to /etc/my.cnf on the first node:
+
+wsrep_provider=/usr/local/mysql/lib/libgalera_smm.so
+
+wsrep_cluster_name=pxc-cluster
+wsrep_cluster_address=gcomm://192.168.56.101,192.168.56.102,192.168.56.103
+
+wsrep_node_name=pxc1
+wsrep_node_address=192.168.56.101
+
+wsrep_sst_method=xtrabackup-v2
+wsrep_sst_auth=sstuser:passw0rd
+
+pxc_strict_mode=ENFORCING
+
+binlog_format=ROW
+default_storage_engine=InnoDB
+innodb_autoinc_lock_mode=2
+Use the same configuration for the second and third nodes, except the wsrep_node_name and wsrep_node_address variables:
+
+For the second node:
+
+wsrep_node_name=pxc2
+wsrep_node_address=192.168.56.102
+For the third node:
+
+wsrep_node_name=pxc3
+wsrep_node_address=192.168.56.103
+
+
+#注意下参数wsrep_sst_auth
+Specify authentication credentials for SST as <sst_user>:<sst_pass>. You must create this user when Bootstrapping the First Node and provide necessary privileges for it:
+
+mysql> CREATE USER 'sstuser'@'localhost' IDENTIFIED BY 'passw0rd';
+mysql> GRANT RELOAD, LOCK TABLES, PROCESS, REPLICATION CLIENT ON *.* TO
+  'sstuser'@'localhost';
+mysql> FLUSH PRIVILEGES;
+
+
+2.初始化数据库
+/usr/local/mysql/bin/mysqld --initialize
+
+3.Bootstrapping the First Node
+Instead of changing the configuration, start the first node using the following command:
+
+[root@pxc1 ~]# /etc/init.d/mysql bootstrap-pxc
+
+如果实现不能正常启动，用下面的大招：
+mysqld --wsrep_cluster_address=gcomm:// &
+
+4.启动第二个节点
+mysqld --wsrep_cluster_address=gcomm://192.168.56.101,192.168.56.103 &
